@@ -5,11 +5,18 @@
 ----  This source code is licensed under the Apache 2 license found in the
 ----  LICENSE file in the root directory of this source tree. 
 ----
+
+local cmd = torch.CmdLine()
+cmd:text('Options')
+cmd:option('-param-set', 'small', 'Set of parameters to use')
+cmd:option('-gpu', 1, 'GPU to use')
+local cmd_params = cmd:parse(arg)
+
 local ok,cunn = pcall(require, 'fbcunn')
 if not ok then
     ok,cunn = pcall(require,'cunn')
     if ok then
-        print("warning: fbcunn not found. Falling back to cunn") 
+        print("warning: fbcunn not found. Falling back to cunn")
         LookupTable = nn.LookupTable
     else
         print("Could not find cunn or fbcunn. Either is required")
@@ -24,9 +31,9 @@ require('nngraph')
 require('base')
 local ptb = require('data')
 
+local param_sets = {}
 -- Train 1 day and gives 82 perplexity.
---[[
-local params = {batch_size=20,
+param_sets["large"] = {batch_size=20,
                 seq_length=35,
                 layers=2,
                 decay=1.15,
@@ -38,10 +45,9 @@ local params = {batch_size=20,
                 max_epoch=14,
                 max_max_epoch=55,
                 max_grad_norm=10}
-               ]]--
 
 -- Trains 1h and gives test 115 perplexity.
-local params = {batch_size=20,
+param_sets["small"] = {batch_size=20,
                 seq_length=20,
                 layers=2,
                 decay=2,
@@ -53,6 +59,13 @@ local params = {batch_size=20,
                 max_epoch=4,
                 max_max_epoch=13,
                 max_grad_norm=5}
+
+params = param_sets[cmd_params["param-set"]]
+if params == nil then
+  print("Bad param set: " .. cmd_params["param-set"])
+  os.exit()
+end
+
 
 local function transfer_data(x)
   return x:cuda()
@@ -221,8 +234,8 @@ local function run_test()
   g_enable_dropout(model.rnns)
 end
 
-local function main()
-  g_init_gpu(arg)
+local function main(gpuidx)
+  g_init_gpu({gpuidx})
   state_train = {data=transfer_data(ptb.traindataset(params.batch_size))}
   state_valid =  {data=transfer_data(ptb.validdataset(params.batch_size))}
   state_test =  {data=transfer_data(ptb.testdataset(params.batch_size))}
@@ -277,4 +290,4 @@ local function main()
   print("Training is over.")
 end
 
-main()
+main(cmd_params.gpu)

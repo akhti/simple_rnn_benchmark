@@ -1,1 +1,1 @@
-LSTM LM implemation by Wojciech Zaremba. Copied from https://github.com/wojzaremba/lstm
+LSTM LM implemation by Wojciech Zaremba (with minor modifications by akhti). Copied from https://github.com/wojzaremba/lstm
